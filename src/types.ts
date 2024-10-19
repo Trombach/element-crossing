@@ -50,6 +50,8 @@ type ExpressionKindMap = {
 };
 type ShortExpressionKind = keyof ShortExpressionKindMap;
 type ExpressionKind = keyof ExpressionKindMap;
+type UniqueExpressionKind = Extract<ExpressionKind, 'id'>;
+type UniqueShortExpressionKind = ExpressionKindMap[UniqueExpressionKind];
 
 type ExtractExpressionKind<E extends string> = E extends `${infer U}:${string}`
 	? U extends ExpressionKind
@@ -67,17 +69,23 @@ type Validate<
 > = S extends `${E}:${string}`
 	? S extends `${E}:${string} ${infer Rest}`
 		? S extends `${infer F} ${Rest}`
-			? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+			? ExtractExpressionKind<F> extends UniqueExpressionKind
+				? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+				: `${F} ${Validate<Rest, E>}`
 			: never
 		: S
 	: S extends `${ExpressionKindMap[E]}${string}`
 		? S extends `${ExpressionKindMap[E]}${string} ${infer Rest}`
 			? S extends `${infer F} ${Rest}`
-				? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+				? ExtractExpressionKind<F> extends UniqueShortExpressionKind
+					? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+					: `${F} ${Validate<Rest, E>}`
 				: never
 			: S
 		: never;
 
 const validate = <T extends string>(t: T extends Validate<T> ? T : Validate<T>) => t;
 
-const validated = validate('id:test class:prop');
+const validated = validate(
+	'id:test class:prop .prop style:pop -pop prop:test prop:test anim:asdf ~asdf'
+);
