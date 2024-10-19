@@ -33,3 +33,51 @@ export type ElementSpec = {
 	timestamp: number;
 	specs: Spec[];
 };
+
+type ShortExpressionKindMap = {
+	'#': 'id';
+	'.': 'class';
+	'@': 'prop';
+	'-': 'style';
+	'~': 'anim';
+};
+type ExpressionKindMap = {
+	id: '#';
+	class: '.';
+	prop: '@';
+	style: '-';
+	anim: '~';
+};
+type ShortExpressionKind = keyof ShortExpressionKindMap;
+type ExpressionKind = keyof ExpressionKindMap;
+
+type ExtractExpressionKind<E extends string> = E extends `${infer U}:${string}`
+	? U extends ExpressionKind
+		? U
+		: never
+	: E extends `${infer V}${string}`
+		? V extends ShortExpressionKind
+			? ShortExpressionKindMap[V]
+			: never
+		: never;
+
+type Validate<
+	S extends string,
+	E extends ExpressionKind = ExpressionKind,
+> = S extends `${E}:${string}`
+	? S extends `${E}:${string} ${infer Rest}`
+		? S extends `${infer F} ${Rest}`
+			? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+			: never
+		: S
+	: S extends `${ExpressionKindMap[E]}${string}`
+		? S extends `${ExpressionKindMap[E]}${string} ${infer Rest}`
+			? S extends `${infer F} ${Rest}`
+				? `${F} ${Validate<Rest, Exclude<E, ExtractExpressionKind<F>>>}`
+				: never
+			: S
+		: never;
+
+const validate = <T extends string>(t: T extends Validate<T> ? T : Validate<T>) => t;
+
+const validated = validate('id:test class:prop');
